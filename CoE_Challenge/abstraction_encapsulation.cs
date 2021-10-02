@@ -25,41 +25,73 @@ namespace unsolved
         {
             
             var shampoo = new Item { Name = "Shampoo", Price = 12.95m };
-            var soap = new Item { Name = "Soap", Price = 8m };
-            var nachos = new Item{Name ="Nachos", Price = 7m};
-            var soda = new Item{Name ="Soda (2 lts)", Price = 13.50m};
-            var chips = new Item{Name ="Potato chips", Price = 10m};
-            var dip = new Item { Name = "Dip", Price = 10m };
+            var soap    = new Item { Name = "Soap", Price = 8m };
+            var nachos  = new Item { Name = "Nachos", Price = 7m };
+            var soda    = new Item { Name = "Soda (2 lts)", Price = 13.50m };
+            var chips   = new Item { Name = "Potato chips", Price = 10m };
+            var dip     = new Item { Name = "Dip", Price = 10m };
             
             var order = new Order();
-            order.Lines.Add(new OrderLine { Item = shampoo, Quantity = 2 });
-            order.Lines.Add(new OrderLine { Item = shampoo, Quantity = 2 });
-            order.Lines.Add(new OrderLine { Item = soap, Quantity = 5 });
-            order.Lines.Add(new OrderLine{Item = nachos, Quantity = 2});
-            order.Lines.Add(new OrderLine{Item = soda, Quantity = 1});
-            order.Lines.Add(new OrderLine{Item = chips, Quantity = 1});
+            order.Add(new OrderLine { Item = shampoo, Quantity = 2 });
+            order.Add(new OrderLine { Item = shampoo, Quantity = 2 });
+            order.Add(new OrderLine { Item = soap,    Quantity = 5 });
+            order.Add(new OrderLine { Item = nachos,  Quantity = 2 });
+            order.Add(new OrderLine { Item = soda,    Quantity = 1 });
+            order.Add(new OrderLine { Item = chips,   Quantity = 1 });
 
-            
-            decimal total = 0;
-            foreach (var line in order.Lines)
-            {
-                total += line.Quantity * line.Item.Price;
-            }
-
-            decimal tax = 0;//total * 0.16m;
-            Console.WriteLine($"the expected cost is 101.3840. The actual cost is {total + tax}");
+            Console.WriteLine($"the expected cost is 101.3840. The actual cost is { order.CalcCost() }");
             
         }
     }
 
     public class Order
     {
+        public decimal Tax {get; set;}
+        private Dictionary<string, OrderLine> Lines;
         public Order()
         {
-            Lines = new List<OrderLine>();
+            Lines = new Dictionary<string, OrderLine>();
+            Tax = 1.16m;
         }
 
-        public List<OrderLine> Lines { get; set; }
+        private string genUID(Item item){ return item.Name.Replace(" ", ""); }
+
+        public Order Add(OrderLine orderLine){ 
+            string uID = genUID(orderLine.Item);
+            if (Lines.ContainsKey(uID)){
+                Lines[uID].Quantity += orderLine.Quantity;
+            } else {
+                Lines.Add(uID, orderLine);
+            }
+            return this;
+        }
+
+        public Order Remove(OrderLine orderLine){ return Remove( orderLine.Item, orderLine.Quantity ); }
+        
+        public Order Remove(Item item, int quantity = 1){
+            string uID = genUID(item);
+
+            if (Lines.ContainsKey(uID)){
+                if (Lines[uID].Quantity > quantity){
+                    Lines[uID].Quantity -= quantity;
+                } else {
+                    Lines.Remove(uID);
+                }
+            }
+            
+            return this;
+        }
+
+        public decimal CalcCost(){
+            decimal total = 0;
+
+            foreach (var line in Lines)
+            {
+                total += line.Value.Quantity * line.Value.Item.Price;
+            }
+
+            return total*Tax;
+        }
 
     }
 
@@ -74,5 +106,13 @@ namespace unsolved
     {
         public string Name { get; set; }
         public decimal Price { get; set; }
+    }
+
+    public interface IPromotion{
+        public string Name { get; set; }
+        
+        public string Description { get; set; }
+
+        public decimal Price();
     }
 }
