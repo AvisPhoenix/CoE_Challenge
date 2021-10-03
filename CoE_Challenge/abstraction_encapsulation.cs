@@ -32,12 +32,12 @@ namespace unsolved
             var dip     = new Item { Name = "Dip", Price = 10m };
             
             var order = new Order();
-            order.Add(new OrderLine { Item = shampoo, Quantity = 2 });
-            order.Add(new OrderLine { Item = shampoo, Quantity = 2 });
-            order.Add(new OrderLine { Item = soap,    Quantity = 5 });
-            order.Add(new OrderLine { Item = nachos,  Quantity = 2 });
-            order.Add(new OrderLine { Item = soda,    Quantity = 1 });
-            order.Add(new OrderLine { Item = chips,   Quantity = 1 });
+            order.Add(new OrderLine { Item = shampoo, Quantity = 2 })
+                 .Add(new OrderLine { Item = shampoo, Quantity = 2 })
+                 .Add(new OrderLine { Item = soap,    Quantity = 5 })
+                 .Add(new OrderLine { Item = nachos,  Quantity = 2 })
+                 .Add(new OrderLine { Item = soda,    Quantity = 1 })
+                 .Add(new OrderLine { Item = chips,   Quantity = 1 });
 
             Console.WriteLine($"the expected cost is 101.3840. The actual cost is { order.CalcCost() }");
             
@@ -48,6 +48,7 @@ namespace unsolved
     {
         public decimal Tax {get; set;}
         private Dictionary<string, OrderLine> Lines;
+        private List<IPromotional> Promotions;
         public Order()
         {
             Lines = new Dictionary<string, OrderLine>();
@@ -62,6 +63,13 @@ namespace unsolved
                 Lines[uID].Quantity += orderLine.Quantity;
             } else {
                 Lines.Add(uID, orderLine);
+            }
+            return this;
+        }
+
+        public Order Add(List<OrderLine> orderLines){ 
+            foreach (var item in orderLines){
+                Add(item);
             }
             return this;
         }
@@ -82,6 +90,10 @@ namespace unsolved
             return this;
         }
 
+        public int Quantity(Item item){
+            string uID = genUID(item);
+            return Lines.ContainsKey(uID)? Lines[uID].Quantity : 0;
+        }
         public decimal CalcCost(){
             decimal total = 0;
 
@@ -108,11 +120,11 @@ namespace unsolved
         public decimal Price { get; set; }
     }
 
-    public interface IPromotion{
+    public interface IPromotional{
         public string Name { get; set; }
         
         public string Description { get; set; }
 
-        public decimal Price();
+        public List<OrderLine> Promotion();
     }
 }
