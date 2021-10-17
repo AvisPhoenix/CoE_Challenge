@@ -216,7 +216,7 @@ namespace unsolved
             if (lineQuantity/N >= 1){
                 output = new List<OrderLine>();
                 output.Add(new OrderLine { Item= new Item { Name=this.Name,
-                                                            Price= ((M-N)/N)*linePrice
+                                                            Price= ((M-N))*linePrice
                                                           },
                                            Quantity=lineQuantity/N
                                          });
@@ -230,6 +230,10 @@ namespace unsolved
         public string Name { get; set; }
         private List<BundleProduct> ProductsBundle { get; set; }
         private List<OrderLine> FreeProductsBundle { get; set; }
+        public BundlePromotional(){
+            ProductsBundle = new List<BundleProduct>();
+            FreeProductsBundle = new List<OrderLine>();
+        }
         public BundlePromotional AddProductsBundle( BundleProduct bundleProduct){
             ProductsBundle.Add(bundleProduct);
             return this;
@@ -314,6 +318,8 @@ namespace unsolved
         private List<OrderLine> FreeProductsBundle { get; set; }
         public BundlePromotionalFactory( string BundleName){
             this.BundleName = BundleName;
+            ProductsBundle = new List<BundleProduct>();
+            FreeProductsBundle = new List<OrderLine>();
         }
         public BundlePromotionalFactory AddProductsBundle( string productUID, int quantity){
             ProductsBundle.Add(new BundleProduct {ProductUID= productUID, Quantity = quantity });
