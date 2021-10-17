@@ -16,6 +16,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace unsolved
 {
@@ -42,7 +43,8 @@ namespace unsolved
                  .Add(new OrderLine { Item = soda,    Quantity = 1 })
                  .Add(new OrderLine { Item = chips,   Quantity = 1 });
 
-            Console.WriteLine($"the expected cost is 101.3840. The actual cost is { order.CalcCost() }");
+            Console.WriteLine(order.PrintTicket());
+            Console.WriteLine($"the expected cost is 101.3840. The actual cost is { order.CalcCost().ToString("F4") }");
             
         }
 
@@ -147,6 +149,34 @@ namespace unsolved
             return total*Tax;
         }
 
+        public string PrintTicket(){
+            StringBuilder sb = new StringBuilder();
+            decimal total = CalcCost();
+            BuildOrderLine(sb);
+            BuildPromotionals(sb);
+            BuildShowTotalCost(sb,total);
+            return sb.ToString();
+        }
+        public void BuildOrderLine(StringBuilder sb){
+            sb.AppendFormat("{0} Order {0}\n", new string('-',37));
+            foreach (var item in Lines){
+                sb.Append(item.Value.ToString());
+                sb.Append("\n");
+            }
+        }
+
+        public void BuildPromotionals(StringBuilder sb){
+            sb.AppendFormat("{0} Promotional {0}\n", new string('-',34));
+            foreach (var item in PromotionalsApplied){
+                sb.Append(item.ToString());
+                sb.Append("\n");
+            }
+        }
+
+        public void BuildShowTotalCost(StringBuilder sb, decimal total){
+            sb.AppendFormat("{0}\n",new string('-',81)); 
+            sb.AppendFormat("{0,20}{1}>${2,5}\n","Total", new string('-',52), total.ToString("F4")); 
+        }
         private void ApplyPromotionals(){
             PromotionalsApplied.Clear();
             foreach (IPromotional promotional in Promotionals){
@@ -177,10 +207,14 @@ namespace unsolved
         }
     }
 
-    public class OrderLine
-    {
+    public class OrderLine{
         public Item Item { get; set; }
         public int Quantity { get; set; }
+
+        public override string ToString(){
+            // 77 columns
+            return String.Format("{0,50} (${1, 9}) x {2, 3} = ${3,8}",Item.Name, Item.Price.ToString("F4"), Quantity.ToString(),  (Item.Price*Quantity).ToString("F4"));
+        }
     }
 
 
@@ -254,7 +288,7 @@ namespace unsolved
 
         public List<OrderLine> Apply(Dictionary<string, OrderLine> lines){
             int bundleCount = CalculateBundleQuantity(lines);
-            return bundleCount > 0 ?  createOrderLine(lines,bundleCount)
+            return bundleCount > 0 ?  createOutput(lines,bundleCount)
                                     : null;
         }
 
@@ -280,28 +314,33 @@ namespace unsolved
                                                 : -linesQuantity*itemPrice;
         }
 
-        private string CalculateDiscountDescription(Dictionary<string, OrderLine> lines, int bundleCount){
-            string descriptionName = bundleCount.ToString() + " x " + Name;;
-            foreach (OrderLine order in FreeProductsBundle){
-                descriptionName += "\n " + order.Quantity.ToString() + " " + order.Item.Name + "(" + 
-                                   ( lines.ContainsKey(order.Item.genUID())?  BuildDiscountItemDescription(lines[order.Item.genUID()].Quantity, bundleCount*order.Quantity)
-                                                                            : " + " + (bundleCount*order.Quantity) )
-                                   + ")";
+        private void CalculateDiscountDetails(Dictionary<string, OrderLine> lines, int bundleCount, List<OrderLine> oLines){
+            foreach (OrderLine order in FreeProductsBundle){ 
+                if (lines.ContainsKey(order.Item.genUID())){
+                    BuildDiscountItemDescription(lines[order.Item.genUID()].Quantity, bundleCount*order.Quantity, order.Item, oLines);
+                }else {
+                    oLines.Add(createOrderLine(order.Item.Name, 0, bundleCount*order.Quantity));
+                }
             }
-            return descriptionName;
         }
-        private string BuildDiscountItemDescription(int linesQuantity, int itemQuantity){
-            return linesQuantity >= itemQuantity?  "-" + itemQuantity.ToString()
-                                                 : "-" + linesQuantity.ToString() + " +" + (itemQuantity-linesQuantity).ToString();
+        private OrderLine createOrderLine(string name, decimal price, int quantity){
+            return new OrderLine { Item= new Item { Name=name, Price=price}, Quantity= quantity };
+        }
+        private void BuildDiscountItemDescription(int linesQuantity, int itemQuantity, Item item, List<OrderLine> oLines){
+            oLines.Add(createOrderLine(item.Name, item.Price, -(linesQuantity < itemQuantity? linesQuantity: itemQuantity) ));
+            if (linesQuantity < itemQuantity){
+                oLines.Add(createOrderLine(item.Name, 0, itemQuantity-linesQuantity ));
+            }
         }
 
-        private List<OrderLine> createOrderLine(Dictionary<string, OrderLine> lines, int bundleCount){
+        private List<OrderLine> createOutput(Dictionary<string, OrderLine> lines, int bundleCount){
             List<OrderLine> output = new List<OrderLine>();
-            output.Add(new OrderLine { Item= new Item { Name= CalculateDiscountDescription(lines,bundleCount),
-                                                        Price= CalculateDiscount(lines,bundleCount)
+            output.Add(new OrderLine { Item= new Item { Name= String.Format("{0} (Total: ${1})", Name , CalculateDiscount(lines,bundleCount).ToString("F4")),
+                                                        Price= 0
                                                       },
-                                        Quantity= 1
+                                        Quantity= bundleCount
                                      });
+            CalculateDiscountDetails(lines,bundleCount,output);
             return output;
         }
 
