@@ -175,7 +175,7 @@ namespace unsolved
 
         public void BuildShowTotalCost(StringBuilder sb, decimal total){
             sb.AppendFormat("{0}\n",new string('-',81)); 
-            sb.AppendFormat("{0,20}{1}>${2,5}\n","Total", new string('-',52), total.ToString("F4")); 
+            sb.AppendFormat("{0,50}{1}>${2,5}\n","Total", new string('-',22), total.ToString("F4")); 
         }
         private void ApplyPromotionals(){
             PromotionalsApplied.Clear();
