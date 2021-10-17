@@ -158,7 +158,7 @@ namespace unsolved
             return sb.ToString();
         }
         public void BuildOrderLine(StringBuilder sb){
-            sb.AppendFormat("{0} Order {0}\n", new string('-',37));
+            sb.AppendFormat("{0} Order {0}\n", new string('-',38));
             foreach (var item in Lines){
                 sb.Append(item.Value.ToString());
                 sb.Append("\n");
@@ -166,7 +166,7 @@ namespace unsolved
         }
 
         public void BuildPromotionals(StringBuilder sb){
-            sb.AppendFormat("{0} Promotional {0}\n", new string('-',34));
+            sb.AppendFormat("{0} Promotional {0}\n", new string('-',35));
             foreach (var item in PromotionalsApplied){
                 sb.Append(item.ToString());
                 sb.Append("\n");
@@ -174,8 +174,8 @@ namespace unsolved
         }
 
         public void BuildShowTotalCost(StringBuilder sb, decimal total){
-            sb.AppendFormat("{0}\n",new string('-',81)); 
-            sb.AppendFormat("{0,50}{1}>${2,5}\n","Total", new string('-',22), total.ToString("F4")); 
+            sb.AppendFormat("{0}\n",new string('-',82)); 
+            sb.AppendFormat("{0,50}{1}>${2,9}\n","Total", new string('-',21), total.ToString("F4")); 
         }
         private void ApplyPromotionals(){
             PromotionalsApplied.Clear();
@@ -213,7 +213,7 @@ namespace unsolved
 
         public override string ToString(){
             // 77 columns
-            return String.Format("{0,50} (${1, 9}) x {2, 3} = ${3,8}",Item.Name, Item.Price.ToString("F4"), Quantity.ToString(),  (Item.Price*Quantity).ToString("F4"));
+            return String.Format("{0,50} (${1, 9}) x {2, 3} = ${3,9}",Item.Name, Item.Price.ToString("F4"), Quantity.ToString(),  (Item.Price*Quantity).ToString("F4"));
         }
     }
 
