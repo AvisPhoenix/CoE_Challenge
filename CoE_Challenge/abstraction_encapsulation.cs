@@ -210,7 +210,14 @@ namespace unsolved
     public class OrderLine{
         public Item Item { get; set; }
         public int Quantity { get; set; }
+        public int OnBundle { get; set; }
 
+        public OrderLine(){
+            OnBundle = 0;
+        }
+        public int AvailableItems(){
+            return Quantity-OnBundle;
+        }
         public override string ToString(){
             // 77 columns
             return String.Format("{0,50} (${1, 9}) x {2, 3} = ${3,9}",Item.Name, Item.Price.ToString("F4"), Quantity.ToString(),  (Item.Price*Quantity).ToString("F4"));
@@ -242,18 +249,18 @@ namespace unsolved
         public int M { get; set; }
 
         public List<OrderLine> Apply(Dictionary<string, OrderLine> lines){
-            return lines.ContainsKey(ProductUID)? CalculateDiscount(lines[ProductUID].Quantity, lines[ProductUID].Item.Price): null;
+            return lines.ContainsKey(ProductUID)? CalculateDiscount(lines[ProductUID]): null;
         }
 
-        private List<OrderLine> CalculateDiscount(int lineQuantity, decimal linePrice){
-            List<OrderLine> output = null;
-            if (lineQuantity/N >= 1){
-                output = new List<OrderLine>();
+        private List<OrderLine> CalculateDiscount(OrderLine order){
+            List<OrderLine> output = order.AvailableItems()/N >= 1? new List<OrderLine>() : null;
+            if (order.AvailableItems()/N >= 1){
                 output.Add(new OrderLine { Item= new Item { Name=this.Name,
-                                                            Price= ((M-N))*linePrice
+                                                            Price= ((M-N))*order.Item.Price
                                                           },
-                                           Quantity=lineQuantity/N
+                                           Quantity=order.AvailableItems()/N
                                          });
+                order.OnBundle += (order.AvailableItems()/N)*N; //Remember: (A/B)*B != A when A and B are Integers
             }
             return output;
         }
@@ -288,22 +295,29 @@ namespace unsolved
 
         public List<OrderLine> Apply(Dictionary<string, OrderLine> lines){
             int bundleCount = CalculateBundleQuantity(lines);
+            if (bundleCount > 0) AnnotateProducts(lines, bundleCount);
             return bundleCount > 0 ?  createOutput(lines,bundleCount)
                                     : null;
         }
 
         private int CalculateBundleQuantity(Dictionary<string, OrderLine> lines){
-            int minQuantity=ProductsBundle.Count > 0? lines[ProductsBundle[0].ProductUID].Quantity/ProductsBundle[0].Quantity: 0; 
+            int minQuantity=ProductsBundle.Count > 0? lines[ProductsBundle[0].ProductUID].AvailableItems()/ProductsBundle[0].Quantity: 0; 
             foreach (BundleProduct item in ProductsBundle){
-                minQuantity = lines.ContainsKey(item.ProductUID) && lines[item.ProductUID].Quantity/item.Quantity < minQuantity? lines[item.ProductUID].Quantity/item.Quantity : minQuantity;
+                minQuantity = lines.ContainsKey(item.ProductUID)? CalculateItemQuantity(lines[item.ProductUID], item, minQuantity)
+                                                                 : minQuantity;
             }
             return minQuantity;
+        }
+
+        private int CalculateItemQuantity(OrderLine order, BundleProduct item, int currentMinQuantity){
+            return order.AvailableItems()/item.Quantity < currentMinQuantity?  order.AvailableItems()/item.Quantity 
+                                                                             : currentMinQuantity;
         }
 
         private decimal CalculateDiscount(Dictionary<string, OrderLine> lines, int bundleCount){
             decimal output=0;
             foreach (OrderLine order in FreeProductsBundle){
-                output += lines.ContainsKey(order.Item.genUID())? CalculateDiscountItem(lines[order.Item.genUID()].Quantity, bundleCount*order.Quantity, lines[order.Item.genUID()].Item.Price )
+                output += lines.ContainsKey(order.Item.genUID())? CalculateDiscountItem(lines[order.Item.genUID()].AvailableItems(), bundleCount*order.Quantity, lines[order.Item.genUID()].Item.Price )
                                                                  : 0;
             }
             return output;
@@ -317,7 +331,7 @@ namespace unsolved
         private void CalculateDiscountDetails(Dictionary<string, OrderLine> lines, int bundleCount, List<OrderLine> oLines){
             foreach (OrderLine order in FreeProductsBundle){ 
                 if (lines.ContainsKey(order.Item.genUID())){
-                    BuildDiscountItemDescription(lines[order.Item.genUID()].Quantity, bundleCount*order.Quantity, order.Item, oLines);
+                    BuildDiscountItemDetails(lines[order.Item.genUID()].AvailableItems(), bundleCount*order.Quantity, lines[order.Item.genUID()], oLines);
                 }else {
                     oLines.Add(createOrderLine(order.Item.Name, 0, bundleCount*order.Quantity));
                 }
@@ -326,10 +340,11 @@ namespace unsolved
         private OrderLine createOrderLine(string name, decimal price, int quantity){
             return new OrderLine { Item= new Item { Name=name, Price=price}, Quantity= quantity };
         }
-        private void BuildDiscountItemDescription(int linesQuantity, int itemQuantity, Item item, List<OrderLine> oLines){
-            oLines.Add(createOrderLine(item.Name, item.Price, -(linesQuantity < itemQuantity? linesQuantity: itemQuantity) ));
+        private void BuildDiscountItemDetails(int linesQuantity, int itemQuantity, OrderLine order, List<OrderLine> oLines){
+            oLines.Add(createOrderLine(order.Item.Name, order.Item.Price, -(linesQuantity < itemQuantity? linesQuantity: itemQuantity) ));
+            AnnotateOrder(order, linesQuantity < itemQuantity? linesQuantity: itemQuantity);
             if (linesQuantity < itemQuantity){
-                oLines.Add(createOrderLine(item.Name, 0, itemQuantity-linesQuantity ));
+                oLines.Add(createOrderLine(order.Item.Name, 0, itemQuantity-linesQuantity ));
             }
         }
 
@@ -342,6 +357,16 @@ namespace unsolved
                                      });
             CalculateDiscountDetails(lines,bundleCount,output);
             return output;
+        }
+
+        private void AnnotateOrder(OrderLine order, int quantity){
+            order.OnBundle += quantity;
+        }
+
+        private void AnnotateProducts(Dictionary<string, OrderLine> lines, int bundleCount){
+            foreach (var item in ProductsBundle){
+                AnnotateOrder(lines[item.ProductUID],bundleCount*item.Quantity);
+            }
         }
 
     }
