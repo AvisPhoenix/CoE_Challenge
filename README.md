@@ -9,6 +9,7 @@ A kata to practice OOP principles
 * for each bundle of 1 shampoo and 1 soap you get another free soap
 * when you buy 2 bags of nachos or more you get 1 dip for free
 * for each bundle of 1 2 lts soda and 1 bag of chips, you get another bag of chips for free
+* promotionals cannot be combined with any other one.
 
 ## restrictions: 
 * no more than 5 lines per method
