@@ -22,33 +22,47 @@ namespace unsolved
 {
     public class Test
     {
-        public static void Main()
-        {
-            
-            var shampoo = new Item { Name = "Shampoo", Price = 12.95m };
-            var soap    = new Item { Name = "Soap", Price = 8m };
-            var nachos  = new Item { Name = "Nachos", Price = 7m };
-            var soda    = new Item { Name = "Soda (2 lts)", Price = 13.50m };
-            var chips   = new Item { Name = "Potato chips", Price = 10m };
-            var dip     = new Item { Name = "Dip", Price = 10m };
-            
+        public static void Main(){
+            var db = BuildDataBase();
             var order = new Order();
             
-            AddPromotionals(order, shampoo, soap, nachos, dip, soda, chips);
+            AddPromotionals(order, db["shampoo"], db["soap"], db["nachos"], db["dip"], db["soda"], db["chips"]);
 
-            order.Add(new OrderLine { Item = shampoo, Quantity = 2 })
-                 .Add(new OrderLine { Item = shampoo, Quantity = 2 })
-                 .Add(new OrderLine { Item = soap,    Quantity = 5 })
-                 .Add(new OrderLine { Item = nachos,  Quantity = 2 })
-                 .Add(new OrderLine { Item = soda,    Quantity = 1 })
-                 .Add(new OrderLine { Item = chips,   Quantity = 1 });
+            order.Add(new OrderLine { Item = db["shampoo"], Quantity = 2 })
+                 .Add(new OrderLine { Item = db["shampoo"], Quantity = 2 })
+                 .Add(new OrderLine { Item = db["soap"],    Quantity = 5 })
+                 .Add(new OrderLine { Item = db["nachos"],  Quantity = 2 })
+                 .Add(new OrderLine { Item = db["soda"],    Quantity = 1 })
+                 .Add(new OrderLine { Item = db["chips"],   Quantity = 1 });
 
-            Console.WriteLine(order.PrintTicket());
-            Console.WriteLine($"the expected cost is 101.3840. The actual cost is { order.CalcCost().ToString("F4") }");
-            
+            PrintData(order);
         }
 
-        public static void Add2x1Promotionals(Order order, string shampooUID, string soapUID, string nachosUID, string dipUID, string sodaUID, string chipsUID ){
+        private static Dictionary<string, Item> BuildDataBase(){
+            var dict = new Dictionary<string, Item>();
+            BuildDataBasePart1(dict);
+            BuildDataBasePart2(dict);
+            return dict;
+        }
+
+        private static void BuildDataBasePart1(Dictionary<string, Item> dict){
+            dict["shampoo"] = new Item { Name = "Shampoo", Price = 12.95m };
+            dict["soap"]    = new Item { Name = "Soap", Price = 8m };
+            dict["nachos"]  = new Item { Name = "Nachos", Price = 7m };
+        }
+
+        private static void BuildDataBasePart2(Dictionary<string, Item> dict){
+            dict["soda"]  = new Item { Name = "Soda (2 lts)", Price = 13.50m };
+            dict["chips"] = new Item { Name = "Potato chips", Price = 10m };
+            dict["dip"]   = new Item { Name = "Dip", Price = 10m };
+        }
+
+        private static void PrintData(Order order){
+            Console.WriteLine(order.PrintTicket());
+            Console.WriteLine($"the expected cost is 101.3840. The actual cost is { order.CalcCost().ToString("F4") }");
+        }
+
+        private static void Add2x1Promotionals(Order order, string shampooUID, string soapUID, string nachosUID, string dipUID, string sodaUID, string chipsUID ){
             order.AddPromotional(new DiscountsNxMPromotial{ Name="Shampoo 2x1 Discount",
                                                             ProductUID=shampooUID,
                                                             N = 2,
@@ -63,7 +77,7 @@ namespace unsolved
                                                             M = 1  });
         }
 
-        public static void AddBundlePromotionals(Order order, Item shampoo, Item soap, Item nachos, Item dip, Item soda, Item chips ){
+        private static void AddBundlePromotionals(Order order, Item shampoo, Item soap, Item nachos, Item dip, Item soda, Item chips ){
             order.AddPromotional( new BundlePromotionalFactory("PaqueteBañes Bundle")
                                      .AddProductsBundle(shampoo.genUID(),1).AddProductsBundle(soap.genUID(),1)
                                      .AddFreeProductsBundle(new OrderLine { Item = soap,    Quantity = 1 }).build())
@@ -75,7 +89,7 @@ namespace unsolved
                                      .AddFreeProductsBundle(new OrderLine { Item = chips,    Quantity = 1 }).build());
         }
 
-        public static void AddPromotionals(Order order, Item shampoo, Item soap, Item nachos, Item dip, Item soda, Item chips ){
+        private static void AddPromotionals(Order order, Item shampoo, Item soap, Item nachos, Item dip, Item soda, Item chips ){
             Add2x1Promotionals(order,shampoo.genUID(), soap.genUID(), nachos.genUID(), dip.genUID(), soda.genUID(), chips.genUID());
             AddBundlePromotionals(order, shampoo, soap, nachos, dip, soda, chips);
         }
@@ -88,8 +102,7 @@ namespace unsolved
         private List<IPromotional> Promotionals;
         private List<OrderLine> PromotionalsApplied;
         
-        public Order()
-        {
+        public Order(){
             Lines = new Dictionary<string, OrderLine>();
             Tax = 1.16m;
             Promotionals = new List<IPromotional>();
@@ -98,18 +111,13 @@ namespace unsolved
 
         public Order Add(OrderLine orderLine){ 
             string uID = orderLine.Item.genUID();
-            if (Lines.ContainsKey(uID)){
-                Lines[uID].Quantity += orderLine.Quantity;
-            } else {
-                Lines.Add(uID, orderLine);
-            }
+            if (Lines.ContainsKey(uID)) Lines[uID].Quantity += orderLine.Quantity;
+            else Lines.Add(uID, orderLine);
             return this;
         }
 
         public Order Add(List<OrderLine> orderLines){ 
-            foreach (var item in orderLines){
-                Add(item);
-            }
+            foreach (var item in orderLines) Add(item);
             return this;
         }
 
@@ -118,15 +126,14 @@ namespace unsolved
         public Order Remove(Item item, int quantity = 1){
             string uID = item.genUID();
 
-            if (Lines.ContainsKey(uID)){
-                if (Lines[uID].Quantity > quantity){
-                    Lines[uID].Quantity -= quantity;
-                } else {
-                    Lines.Remove(uID);
-                }
-            }
+            if (Lines.ContainsKey(uID)) ItemRemove( uID, quantity );
             
             return this;
+        }
+
+        private void ItemRemove(string uID, int quantity){
+            if (Lines[uID].Quantity > quantity) Lines[uID].Quantity -= quantity;
+            else Lines.Remove(uID);
         }
 
         public int Quantity(Item item){
@@ -140,22 +147,23 @@ namespace unsolved
         }
 
         public decimal CalcCost(){
-
             ApplyPromotionals();
             decimal total = NormalLinesCost() + PromotionalsDiscount();
-
             return total*Tax;
         }
 
         public string PrintTicket(){
             StringBuilder sb = new StringBuilder();
-            decimal total = CalcCost();
+            BuildSections(sb, CalcCost());
+            return sb.ToString();
+        }
+
+        private void BuildSections(StringBuilder sb, decimal total){
             BuildOrderLine(sb);
             BuildPromotionals(sb);
             BuildShowTotalCost(sb,total);
-            return sb.ToString();
         }
-        public void BuildOrderLine(StringBuilder sb){
+        private void BuildOrderLine(StringBuilder sb){
             sb.AppendFormat("{0} Order {0}\n", new string('-',38));
             foreach (var item in Lines){
                 sb.Append(item.Value.ToString());
@@ -163,7 +171,7 @@ namespace unsolved
             }
         }
 
-        public void BuildPromotionals(StringBuilder sb){
+        private void BuildPromotionals(StringBuilder sb){
             sb.AppendFormat("{0} Promotional {0}\n", new string('-',35));
             foreach (var item in PromotionalsApplied){
                 sb.Append(item.ToString());
@@ -171,7 +179,7 @@ namespace unsolved
             }
         }
 
-        public void BuildShowTotalCost(StringBuilder sb, decimal total){
+        private void BuildShowTotalCost(StringBuilder sb, decimal total){
             sb.AppendFormat("{0}\n",new string('-',82)); 
             sb.AppendFormat("{0,50}{1}>${2,9}\n","Cost", new string('-',21), (total/Tax).ToString("F4")); 
             sb.AppendFormat("{0,50}{1}>${2,9}\n","Taxes", new string('-',21), (total-(total/Tax)).ToString("F4")); 
@@ -182,35 +190,23 @@ namespace unsolved
             clearPromotionalsApplied();
             foreach (IPromotional promotional in Promotionals){
                 List<OrderLine> prom = promotional.Apply(Lines);
-                if (prom != null){
-                    PromotionalsApplied.AddRange(prom);
-                } 
+                if (prom != null) PromotionalsApplied.AddRange(prom);
             }
         }
 
         private void clearPromotionalsApplied(){
             PromotionalsApplied.Clear();
-            foreach (var item in Lines){
-                item.Value.OnBundle =  0;
-            }
+            foreach (var item in Lines) item.Value.OnBundle =  0;
         }
 
         private decimal NormalLinesCost(){
             decimal total = 0;
-
-            foreach (var line in Lines){
-                total += line.Value.Quantity * line.Value.Item.Price;
-            }
-
+            foreach (var line in Lines) total += line.Value.Quantity * line.Value.Item.Price;
             return total;
         }
         private decimal PromotionalsDiscount(){
             decimal total = 0;
-
-            foreach (var line in PromotionalsApplied){
-                total += line.Quantity * line.Item.Price;
-            }
-
+            foreach (var line in PromotionalsApplied) total += line.Quantity * line.Item.Price;
             return total;
         }
     }
@@ -220,18 +216,16 @@ namespace unsolved
         public int Quantity { get; set; }
         public int OnBundle { get; set; }
 
-        public OrderLine(){
-            OnBundle = 0;
-        }
-        public int AvailableItems(){
-            return Quantity-OnBundle;
-        }
+        public OrderLine(){ OnBundle = 0; }
+        public int AvailableItems(){ return Quantity-OnBundle; }
         public override string ToString(){
             // 77 columns
-            return String.Format("{0,50} (${1, 9}) x {2, 3} = ${3,9}",Item.Name, Item.Price.ToString("F4"), Quantity.ToString(),  (Item.Price*Quantity).ToString("F4"));
+            return String.Format("{0,50} (${1, 9}) x {2, 3} = ${3,9}",
+                                 Item.Name, Item.Price.ToString("F4"), 
+                                 Quantity.ToString(), 
+                                 (Item.Price*Quantity).ToString("F4"));
         }
     }
-
 
     public class Item
     {
@@ -263,14 +257,22 @@ namespace unsolved
         private List<OrderLine> CalculateDiscount(OrderLine order){
             List<OrderLine> output = order.AvailableItems()/N >= 1? new List<OrderLine>() : null;
             if (order.AvailableItems()/N >= 1){
-                output.Add(new OrderLine { Item= new Item { Name=this.Name,
-                                                            Price= ((M-N))*order.Item.Price
-                                                          },
-                                           Quantity=order.AvailableItems()/N
-                                         });
+                output.Add( CreateOrder(order.Item.Price, order.AvailableItems()) );
                 order.OnBundle += (order.AvailableItems()/N)*N; //Remember: (A/B)*B != A when A and B are Integers
             }
             return output;
+        }
+
+        private Item CreateItem(decimal price){
+            return new Item { Name=this.Name,
+                              Price= ((M-N))*price
+                            };
+        }
+
+        private OrderLine CreateOrder(decimal price, int quantity){
+            return new OrderLine { Item= CreateItem(price),
+                                   Quantity=quantity/N
+                                 };
         }
 
     }
@@ -283,6 +285,7 @@ namespace unsolved
             ProductsBundle = new List<BundleProduct>();
             FreeProductsBundle = new List<OrderLine>();
         }
+
         public BundlePromotional AddProductsBundle( BundleProduct bundleProduct){
             ProductsBundle.Add(bundleProduct);
             return this;
@@ -304,12 +307,13 @@ namespace unsolved
         public List<OrderLine> Apply(Dictionary<string, OrderLine> lines){
             int bundleCount = CalculateBundleQuantity(lines);
             if (bundleCount > 0) AnnotateProducts(lines, bundleCount);
-            return bundleCount > 0 ?  createOutput(lines,bundleCount)
+            return bundleCount > 0 ?  CreateOutput(lines,bundleCount)
                                     : null;
         }
 
         private int CalculateBundleQuantity(Dictionary<string, OrderLine> lines){
-            int minQuantity=ProductsBundle.Count > 0? lines[ProductsBundle[0].ProductUID].AvailableItems()/ProductsBundle[0].Quantity: 0; 
+            int minQuantity=ProductsBundle.Count > 0? HowManyBundlesCanOrderHoldByFirstItem(lines)
+                                                     : 0; 
             foreach (BundleProduct item in ProductsBundle){
                 minQuantity = lines.ContainsKey(item.ProductUID)? CalculateItemQuantity(lines[item.ProductUID], item, minQuantity)
                                                                  : minQuantity;
@@ -317,9 +321,20 @@ namespace unsolved
             return minQuantity;
         }
 
+        private int HowManyBundlesCanOrderHoldByFirstItem(Dictionary<string, OrderLine> lines){
+            var firstItem = ProductsBundle[0];
+            var orderQuantity = lines[firstItem.ProductUID].AvailableItems();
+            return HowManyBundlesCanOrderHoldByItem(orderQuantity, firstItem.Quantity);
+        }
+
+        private int HowManyBundlesCanOrderHoldByItem(int orderQuantity, int bundleQuantity){
+            return orderQuantity/bundleQuantity;
+        }
+
         private int CalculateItemQuantity(OrderLine order, BundleProduct item, int currentMinQuantity){
-            return order.AvailableItems()/item.Quantity < currentMinQuantity?  order.AvailableItems()/item.Quantity 
-                                                                             : currentMinQuantity;
+            var quantityByItem = HowManyBundlesCanOrderHoldByItem(order.AvailableItems(), item.Quantity);
+            return quantityByItem < currentMinQuantity? quantityByItem
+                                                     : currentMinQuantity;
         }
 
         private decimal CalculateDiscount(Dictionary<string, OrderLine> lines, int bundleCount){
@@ -362,20 +377,30 @@ namespace unsolved
             oLines.Add(createOrderLine(order.Item.Name, 0, itemQuantity-linesQuantity ));
         }
 
-        private List<OrderLine> createOutput(Dictionary<string, OrderLine> lines, int bundleCount){
+        private List<OrderLine> CreateOutput(Dictionary<string, OrderLine> lines, int bundleCount){
             List<OrderLine> output = new List<OrderLine>();
-            output.Add(new OrderLine { Item= new Item { Name= String.Format("{0} (Total: ${1})", Name , CalculateDiscount(lines,bundleCount).ToString("F4")),
-                                                        Price= 0
-                                                      },
-                                        Quantity= bundleCount
-                                     });
+            output.Add( CreateBundleOrder(lines, bundleCount) );
             CalculateDiscountDetails(lines,bundleCount,output);
             return output;
         }
 
-        private void AnnotateOrder(OrderLine order, int quantity){
-            order.OnBundle += quantity;
+        private string BuildBundleDisplayName(Dictionary<string, OrderLine> lines, int bundleCount){
+            return String.Format("{0} (Total: ${1})", Name , CalculateDiscount(lines,bundleCount).ToString("F4"));
         }
+
+        private Item CreateBundleItem(Dictionary<string, OrderLine> lines, int bundleCount){
+            return new Item { Name= BuildBundleDisplayName(lines, bundleCount),
+                              Price= 0
+                            };
+        }
+
+        private OrderLine CreateBundleOrder(Dictionary<string, OrderLine> lines, int bundleCount){
+            return new OrderLine { Item= CreateBundleItem(lines, bundleCount),
+                                   Quantity= bundleCount
+                                 };
+        }
+
+        private void AnnotateOrder(OrderLine order, int quantity){ order.OnBundle += quantity; }
 
         private void AnnotateProducts(Dictionary<string, OrderLine> lines, int bundleCount){
             foreach (var item in ProductsBundle){
@@ -409,8 +434,8 @@ namespace unsolved
         }
         public BundlePromotional build(){
             BundlePromotional bundle = new BundlePromotional{ Name= BundleName};
-            bundle.AddProductsBundle(ProductsBundle);
-            bundle.AddFreeProductsBundle(FreeProductsBundle);
+            bundle.AddProductsBundle(ProductsBundle)
+                  .AddFreeProductsBundle(FreeProductsBundle);
             return bundle;
         }
         
