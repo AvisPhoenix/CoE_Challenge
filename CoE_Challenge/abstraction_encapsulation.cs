@@ -173,8 +173,11 @@ namespace unsolved
 
         public void BuildShowTotalCost(StringBuilder sb, decimal total){
             sb.AppendFormat("{0}\n",new string('-',82)); 
+            sb.AppendFormat("{0,50}{1}>${2,9}\n","Cost", new string('-',21), (total/1.16m).ToString("F4")); 
+            sb.AppendFormat("{0,50}{1}>${2,9}\n","Taxes", new string('-',21), (total-(total/1.16m)).ToString("F4")); 
             sb.AppendFormat("{0,50}{1}>${2,9}\n","Total", new string('-',21), total.ToString("F4")); 
         }
+
         private void ApplyPromotionals(){
             clearPromotionalsApplied();
             foreach (IPromotional promotional in Promotionals){
