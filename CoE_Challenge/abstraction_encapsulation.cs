@@ -140,11 +140,9 @@ namespace unsolved
         }
 
         public decimal CalcCost(){
-            decimal total = 0;
 
             ApplyPromotionals();
-            
-            total = NormalLinesCost() + PromotionalsDiscount();
+            decimal total = NormalLinesCost() + PromotionalsDiscount();
 
             return total*Tax;
         }
@@ -178,12 +176,19 @@ namespace unsolved
             sb.AppendFormat("{0,50}{1}>${2,9}\n","Total", new string('-',21), total.ToString("F4")); 
         }
         private void ApplyPromotionals(){
-            PromotionalsApplied.Clear();
+            clearPromotionalsApplied();
             foreach (IPromotional promotional in Promotionals){
                 List<OrderLine> prom = promotional.Apply(Lines);
                 if (prom != null){
                     PromotionalsApplied.AddRange(prom);
                 } 
+            }
+        }
+
+        private void clearPromotionalsApplied(){
+            PromotionalsApplied.Clear();
+            foreach (var item in Lines){
+                item.Value.OnBundle =  0;
             }
         }
 
@@ -341,11 +346,17 @@ namespace unsolved
             return new OrderLine { Item= new Item { Name=name, Price=price}, Quantity= quantity };
         }
         private void BuildDiscountItemDetails(int linesQuantity, int itemQuantity, OrderLine order, List<OrderLine> oLines){
+            if (linesQuantity > 0) DiscountOrderItems(linesQuantity, itemQuantity, order, oLines);
+            if (linesQuantity < itemQuantity) AddFreeOrderItem(linesQuantity, itemQuantity, order, oLines);
+        }
+
+        private void DiscountOrderItems(int linesQuantity, int itemQuantity, OrderLine order, List<OrderLine> oLines){
             oLines.Add(createOrderLine(order.Item.Name, order.Item.Price, -(linesQuantity < itemQuantity? linesQuantity: itemQuantity) ));
             AnnotateOrder(order, linesQuantity < itemQuantity? linesQuantity: itemQuantity);
-            if (linesQuantity < itemQuantity){
-                oLines.Add(createOrderLine(order.Item.Name, 0, itemQuantity-linesQuantity ));
-            }
+        }
+
+        private void AddFreeOrderItem(int linesQuantity, int itemQuantity, OrderLine order, List<OrderLine> oLines){
+            oLines.Add(createOrderLine(order.Item.Name, 0, itemQuantity-linesQuantity ));
         }
 
         private List<OrderLine> createOutput(Dictionary<string, OrderLine> lines, int bundleCount){
